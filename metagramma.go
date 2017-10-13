@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 	"unicode/utf8"
+	"time"
 )
 
 var (
@@ -24,7 +25,12 @@ type Words []Word
 
 func (a Words) Len() int           { return len(a) }
 func (a Words) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a Words) Less(i, j int) bool { return (a[i].L < a[j].L) && (a[i].W < a[j].W) }
+func (a Words) Less(i, j int) bool {
+	if a[i].L == a[j].L {
+		return a[i].W < a[j].W
+	}
+	return a[i].L < a[j].L
+}
 
 type Leaf struct {
 	Root      string
@@ -68,6 +74,13 @@ func levenshtein_distance(a, b string) int {
 	return currentRow[n]
 }
 
+func (a *Word) customLD(b *Word) bool {
+	if (a.L != b.L) || (a.W == b.W) {
+		return false
+	}
+	return levenshtein_distance(a.W, b.W) == 1
+}
+
 func readFile(name string) ([]Word, error) {
 	var (
 		s      string
@@ -88,7 +101,7 @@ func readFile(name string) ([]Word, error) {
 	return result, nil
 }
 
-func createTree(lines []Word) []Leaf {
+func createStruct(lines []Word) []Leaf {
 	var (
 		result []Leaf
 		candidates []int
@@ -99,13 +112,11 @@ func createTree(lines []Word) []Leaf {
 		candidates = []int{}
 		b := sort.Search(len(lines[:i]), func(j int) bool { return lines[j].L >= line.L })
 		for t, v := range lines[b:i] {
-			//fmt.Println(v.W, line.W)
-			if (v.W != line.W) && (levenshtein_distance(v.W, line.W) == 1) {
+			if line.customLD(&v) {
 				candidates = append(candidates, b + t)
 			}
 		}
-		//fmt.Println(line, b, candidates	)
-		for j := range candidates {
+		for _, j := range candidates {
 			result[j].Relations = append(result[j].Relations, i)
 		}
 		result = append(result, Leaf{Root: line.W, Relations: candidates})
@@ -114,6 +125,11 @@ func createTree(lines []Word) []Leaf {
 }
 
 func main() {
+	start := time.Now()
+	defer func() {
+		fmt.Printf("duration %v\n", time.Now().Sub(start))
+	}()
+
 	init := flag.String("i", "", "configuration file")
 	flag.Parse()
 
@@ -125,8 +141,11 @@ func main() {
 	if err != nil {
 		loggerError.Fatal(err)
 	}
-	fmt.Println(data)
-	fmt.Println(createTree(data))
+	//fmt.Println(data)
+	for i, leaf := range createStruct(data) {
+		fmt.Printf("%v: %v - %v\n", i, leaf.Root, leaf.Relations)
+	}
+	//fmt.Println(createStruct(data))
 	//fmt.Println(levenshtein_distance("amc", "amcerf"))
 	//fmt.Println(levenshtein_distance("", ""))
 	//fmt.Println(levenshtein_distance("abc", "abe"))
