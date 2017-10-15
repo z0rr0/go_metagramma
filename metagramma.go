@@ -1,130 +1,21 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 	"sort"
-	"strings"
-	"unicode/utf8"
 	"time"
 )
 
 var (
-	loggerError = log.New(os.Stderr, fmt.Sprintf("ERROR "), log.Ldate|log.Ltime|log.Lshortfile)
+	logger = log.New(os.Stderr, fmt.Sprintf("METAGRAMMA "), log.Ldate|log.Ltime|log.Lshortfile)
 )
 
-type Word struct {
-	L int
-	W string
-}
-
-type Words []Word
-
-func (a Words) Len() int           { return len(a) }
-func (a Words) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a Words) Less(i, j int) bool {
-	if a[i].L == a[j].L {
-		return a[i].W < a[j].W
-	}
-	return a[i].L < a[j].L
-}
-
-type Leaf struct {
-	Root      string
-	Relations []int
-}
-
-func min(values ...int) int {
-	m := values[0]
-	for _, v := range values {
-		if v < m {
-			m = v
-		}
-	}
-	return m
-}
-
-func levenshtein_distance(a, b string) int {
-	n, m := len(a), len(b)
-	if n > m {
-		a, b = b, a
-		n, m = m, n
-	}
-	currentRow := make([]int, n+1)
-	previousRow := make([]int, n+1)
-	for i := 1; i <= m; i++ {
-		for j := range currentRow {
-			previousRow[j] = currentRow[j]
-			if j == 0 {
-				currentRow[j] = i
-				continue
-			} else {
-				currentRow[j] = 0
-			}
-			add, del, change := previousRow[j]+1, currentRow[j-1]+1, previousRow[j-1]
-			if a[j-1] != b[i-1] {
-				change += 1
-			}
-			currentRow[j] = min(add, del, change)
-		}
-	}
-	return currentRow[n]
-}
-
-func (a *Word) customLD(b *Word) bool {
-	if (a.L != b.L) || (a.W == b.W) {
-		return false
-	}
-	return levenshtein_distance(a.W, b.W) == 1
-}
-
-func readFile(name string) ([]Word, error) {
-	var (
-		s      string
-		result []Word
-	)
-	file, err := os.Open(name)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		s = strings.Trim(scanner.Text(), " ")
-		result = append(result, Word{L: utf8.RuneCountInString(s), W: s})
-	}
-	sort.Sort(Words(result))
-	return result, nil
-}
-
-func createStruct(lines []Word) []Leaf {
-	var (
-		result []Leaf
-		candidates []int
-	)
-
-	for i, line := range lines {
-		// candidates
-		candidates = []int{}
-		b := sort.Search(len(lines[:i]), func(j int) bool { return lines[j].L >= line.L })
-		for t, v := range lines[b:i] {
-			if line.customLD(&v) {
-				candidates = append(candidates, b + t)
-			}
-		}
-		for _, j := range candidates {
-			result[j].Relations = append(result[j].Relations, i)
-		}
-		result = append(result, Leaf{Root: line.W, Relations: candidates})
-	}
-	return result
-}
-
 func main() {
+	var leafs []Leaf
+
 	start := time.Now()
 	defer func() {
 		fmt.Printf("duration %v\n", time.Now().Sub(start))
@@ -134,20 +25,37 @@ func main() {
 	flag.Parse()
 
 	if *init == "" {
-		loggerError.Println("empty init file name")
+		logger.Println("empty init file name")
 		return
 	}
 	data, err := readFile(*init)
 	if err != nil {
-		loggerError.Fatal(err)
+		logger.Fatal(err)
 	}
-	//fmt.Println(data)
-	for i, leaf := range createStruct(data) {
-		fmt.Printf("%v: %v - %v\n", i, leaf.Root, leaf.Relations)
+	ch := make(chan []Leaf)
+
+	parts := 0
+	prev, currentLen := 0, 0
+	for i, w := range data {
+		if w.L != currentLen {
+			parts++
+			//fmt.Printf("xaz, parts=%v, cur=%v, prev=%v, i=%v, data=%v\n", parts, currentLen, prev, i, data[prev:i])
+			go Build(data[prev:i], prev, ch)
+			prev, currentLen = i, w.L
+		}
 	}
-	//fmt.Println(createStruct(data))
-	//fmt.Println(levenshtein_distance("amc", "amcerf"))
-	//fmt.Println(levenshtein_distance("", ""))
-	//fmt.Println(levenshtein_distance("abc", "abe"))
-	//fmt.Println(levenshtein_distance("abcdef", "abzzef"))
+	batchLeafs := make([][]Leaf, parts)
+	for j := 0; j < parts; j++ {
+		batchLeafs[j] = <-ch
+	}
+	close(ch)
+	sort.Sort(Leafs(batchLeafs))
+
+	for j := range batchLeafs {
+		leafs = append(leafs, batchLeafs[j]...)
+	}
+	fmt.Println("done")
+	//for i, leaf := range leafs {
+	//	fmt.Printf("%v: %v - %v\n", i, leaf.Root, leaf.Relations)
+	//}
 }
