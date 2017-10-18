@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
+	"encoding/json"
 )
 
 // Word is a struct for one word data.
@@ -34,8 +35,8 @@ func (a Words) Less(i, j int) bool {
 
 // Leaf is result items of prepared graph.
 type Leaf struct {
-	Root      string
-	Relations []int
+	Root      string `json:"root"`
+	Relations []int  `json:"relations"`
 }
 
 // Leafs is a slice of Leaf's slices.
@@ -183,4 +184,47 @@ func Build(lines []Word, offset int, ch chan []Leaf) {
 		n, offset, len(result), time.Now().Sub(start),
 	)
 	ch <- result
+}
+
+// Prepare builds result Word's array.
+func Prepare(data []Word) []Leaf {
+	var leafs []Leaf
+
+	ch := make(chan []Leaf)
+	parts := 0
+	prev, currentLen := 0, 0
+
+	for i, w := range data {
+		if w.L != currentLen {
+			parts++
+			go Build(data[prev:i], prev, ch)
+			prev, currentLen = i, w.L
+		}
+	}
+	parts++
+	go Build(data[prev:], prev, ch)
+
+	batchLeafs := make([][]Leaf, parts)
+	for j := 0; j < parts; j++ {
+		batchLeafs[j] = <-ch
+	}
+	close(ch)
+	sort.Sort(Leafs(batchLeafs))
+
+	for j := range batchLeafs {
+		leafs = append(leafs, batchLeafs[j]...)
+	}
+	return leafs
+}
+
+// SaveJSON saves prepared result to the file.
+func SaveJSON(leafs []Leaf, filename string) error {
+	file, err := os.OpenFile(filename, os.O_CREATE|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	return encoder.Encode(&leafs)
 }
