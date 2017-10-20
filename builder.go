@@ -2,12 +2,12 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"os"
 	"sort"
 	"strings"
 	"time"
 	"unicode/utf8"
-	"encoding/json"
 )
 
 // Word is a struct for one word data.
@@ -41,6 +41,18 @@ type Leaf struct {
 
 // Leafs is a slice of Leaf's slices.
 type Leafs [][]Leaf
+
+func (l *Leaf) Equal(x *Leaf) bool {
+	if (l.Root != x.Root) || (len(l.Relations) != len(x.Relations)) {
+		return false
+	}
+	for i := range l.Relations {
+		if l.Relations[i] != x.Relations[i] {
+			return false
+		}
+	}
+	return true
+}
 
 func leafSize(l []Leaf) int {
 	if len(l) == 0 {
@@ -81,6 +93,9 @@ func LevenshteinDistance(a, b string) int {
 	}
 	currentRow := make([]int, n+1)
 	previousRow := make([]int, n+1)
+	for i := range currentRow {
+		currentRow[i] = i
+	}
 	for i := 1; i <= m; i++ {
 		for j := range currentRow {
 			previousRow[j] = currentRow[j]
@@ -131,6 +146,7 @@ func readFile(name string) ([]Word, error) {
 }
 
 // buildAll is common (for single goroutine) builder of the graph.
+// It isn't used now.
 func buildAll(lines []Word) []Leaf {
 	var (
 		result     []Leaf
