@@ -20,9 +20,6 @@ func isInit(dictFile, outFile string) error {
 	leafs := Prepare(data)
 
 	fmt.Printf("prepared %v items\n", len(leafs))
-	//for i, v := range leafs {
-	//	fmt.Printf("%v: %v %v\n", i, v.Root, v.Relations)
-	//}
 	err = SaveJSON(leafs, outFile)
 	if err != nil {
 		return err
@@ -30,13 +27,17 @@ func isInit(dictFile, outFile string) error {
 	return nil
 }
 
-func isSearch(dbFile string) error {
+func isSearch(dbFile, start, end string) ([]string, error) {
 	leafs, err := ReadJSON(dbFile)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	fmt.Printf("read %v items\n", len(leafs))
-	return nil
+	logger.Printf("%v items are read from %v\n", len(leafs), dbFile)
+	wordsChain, err := Search(leafs, start, end)
+	if err != nil {
+		return nil, err
+	}
+	return wordsChain, nil
 }
 
 func main() {
@@ -49,18 +50,37 @@ func main() {
 	init := flag.String("i", "", "configuration file")
 	output := flag.String("o", "", "output file")
 	db := flag.String("d", "", "prepared JSON file")
+
+	fromWord := flag.String("f", "", "from word (start)")
+	toWord := flag.String("t", "", "to word (end)")
 	flag.Parse()
 
 	if *init != "" {
 		if *output == "" {
-			logger.Fatal("prapred db error")
+			logger.Fatalln("prapred db error")
 		}
 		err = isInit(*init, *output)
 	} else {
-		if *db == "" {
-			logger.Fatal("no prepared JSON file set")
+		switch {
+		case *db == "":
+			logger.Fatalln("no prepared JSON file set")
+		case (*fromWord == "") || (*toWord == ""):
+			logger.Fatalln("start or end word is not set")
+		case len(*fromWord) != len(*toWord):
+			logger.Fatalln("lengths of words are not equal")
+		case *fromWord == *toWord:
+			logger.Fatalln("words are equal")
 		}
-		err = isSearch(*db)
+		wordsChain, err := isSearch(*db, *fromWord, *toWord)
+		if err == nil {
+			if len(wordsChain) == 1 {
+				fmt.Println("not found way")
+			} else {
+				for i, w := range wordsChain {
+					fmt.Printf("%v: %v\n", i, w)
+				}
+			}
+		}
 	}
 	if err != nil {
 		logger.Fatalln(err)

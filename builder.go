@@ -42,6 +42,7 @@ type Leaf struct {
 // Leafs is a slice of Leaf's slices.
 type Leafs [][]Leaf
 
+// Equal returns true if l is equal x.
 func (l *Leaf) Equal(x *Leaf) bool {
 	if (l.Root != x.Root) || (len(l.Relations) != len(x.Relations)) {
 		return false
@@ -52,6 +53,18 @@ func (l *Leaf) Equal(x *Leaf) bool {
 		}
 	}
 	return true
+}
+
+// Greater returns true if l is greater than x.
+func (l *Leaf) Greater(x string) bool {
+	n, m := len(l.Root), len(x)
+	switch {
+	case n > m:
+		return true
+	case n < m:
+		return false
+	}
+	return l.Root >= x
 }
 
 func leafSize(l []Leaf) int {
@@ -107,7 +120,7 @@ func LevenshteinDistance(a, b string) int {
 			}
 			add, del, change := previousRow[j]+1, currentRow[j-1]+1, previousRow[j-1]
 			if a[j-1] != b[i-1] {
-				change += 1
+				change++
 			}
 			currentRow[j] = min(add, del, change)
 		}
