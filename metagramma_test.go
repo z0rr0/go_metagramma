@@ -68,6 +68,7 @@ func TestSearch(t *testing.T) {
 		{Root: "wyyy", Relations: []int{6, 7}},
 	}
 	failed := [][2]string{
+		{"ab", "ba"},
 		{"ab", "kw"},
 		{"", "kw"},
 		{"ba", "kw"},
@@ -79,7 +80,6 @@ func TestSearch(t *testing.T) {
 		}
 	}
 	success := [][2]string{
-		{"ab", "ba"},
 		{"ba", "be"},
 		{"abc", "afe"},
 		{"afe", "abc"},
@@ -88,7 +88,6 @@ func TestSearch(t *testing.T) {
 		{"wyxy", "wxyy"},
 	}
 	expected := [][]string{
-		{"ab"},
 		{"ba", "be"},
 		{"abc", "abe", "afe"},
 		{"afe", "abe", "abc"},

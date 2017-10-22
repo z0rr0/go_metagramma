@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
@@ -85,6 +86,11 @@ func Search(leafs []Leaf, start, end string) ([]string, error) {
 			}
 		}
 	}
+	if leafs[current.Num].Root != end {
+		// not found
+		return nil, errors.New("not found way")
+	}
+
 	result := []string{}
 	for current != nil {
 		result = append(result, leafs[current.Num].Root)

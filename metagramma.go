@@ -41,13 +41,16 @@ func isSearch(dbFile, start, end string) ([]string, error) {
 }
 
 func main() {
-	var err error
+	var (
+		err        error
+		wordsChain []string
+	)
 	start := time.Now()
 	defer func() {
 		fmt.Printf("duration %v\n", time.Now().Sub(start))
 	}()
 
-	init := flag.String("i", "", "configuration file")
+	init := flag.String("i", "", "init 	dict file")
 	output := flag.String("o", "", "output file")
 	db := flag.String("d", "", "prepared JSON file")
 
@@ -71,9 +74,9 @@ func main() {
 		case *fromWord == *toWord:
 			logger.Fatalln("words are equal")
 		}
-		wordsChain, err := isSearch(*db, *fromWord, *toWord)
+		wordsChain, err = isSearch(*db, *fromWord, *toWord)
 		if err == nil {
-			if len(wordsChain) == 1 {
+			if len(wordsChain) < 2 {
 				fmt.Println("not found way")
 			} else {
 				for i, w := range wordsChain {
