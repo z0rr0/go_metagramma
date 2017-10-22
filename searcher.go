@@ -42,6 +42,7 @@ func searchWord(leafs []Leaf, w string) int {
 // Search searches the shortest path between two words.
 // It is based on Dijkstra's algorithm.
 func Search(leafs []Leaf, start, end string) ([]string, error) {
+	var minPath int
 	s, e := searchWord(leafs, start), searchWord(leafs, end)
 	if s < 0 {
 		return nil, fmt.Errorf("word '%v' is not found in the data file", start)
@@ -64,22 +65,23 @@ func Search(leafs []Leaf, start, end string) ([]string, error) {
 				continue
 			}
 			if _, ok := grey[v]; ok {
-				// skip 2nd grey vertex
+				// skip grey vertex
 				continue
 			}
 			grey[v] = &Vertex{Num: v, Size: current.Size + 1, Prev: current}
 			if v == e {
 				current = grey[v]
-				grey = map[int]*Vertex{} // 1st "for" exit condition
+				grey = map[int]*Vertex{} // "for" exit condition
 				break
 			}
 		}
 		if len(grey) == 0 {
 			break
 		}
+		minPath = -1
 		for s, v := range grey {
-			if v.Size < current.Size {
-				current = grey[s]
+			if (minPath < 0) || (v.Size < current.Size) {
+				current, minPath = grey[s], v.Size
 			}
 		}
 	}
@@ -87,6 +89,10 @@ func Search(leafs []Leaf, start, end string) ([]string, error) {
 	for current != nil {
 		result = append(result, leafs[current.Num].Root)
 		current = current.Prev
+	}
+	// reverse result
+	for i, j := 0, len(result)-1; i < j; i, j = i+1, j-1 {
+		result[i], result[j] = result[j], result[i]
 	}
 	return result, nil
 }

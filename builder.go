@@ -99,9 +99,10 @@ func min(values ...int) int {
 
 // LevenshteinDistance calculates Levenshtein distance for two strings.
 func LevenshteinDistance(a, b string) int {
-	n, m := len(a), len(b)
+	r1, r2 := []rune(a), []rune(b)
+	n, m := len(r1), len(r2)
 	if n > m {
-		a, b = b, a
+		r1, r2 = r2, r1
 		n, m = m, n
 	}
 	currentRow := make([]int, n+1)
@@ -119,7 +120,7 @@ func LevenshteinDistance(a, b string) int {
 				currentRow[j] = 0
 			}
 			add, del, change := previousRow[j]+1, currentRow[j-1]+1, previousRow[j-1]
-			if a[j-1] != b[i-1] {
+			if r1[j-1] != r2[i-1] {
 				change++
 			}
 			currentRow[j] = min(add, del, change)
