@@ -1,6 +1,6 @@
 # GoMetagramma
 
-It is a metagramma game - find the shortest way from a word to other one changing only one symbol.
+It is a [metagramma](https://ru.wikipedia.org/wiki/%D0%9C%D0%B5%D1%82%D0%B0%D0%B3%D1%80%D0%B0%D0%BC%D0%BC%D1%8B) game - find the shortest way from a word to other one changing only one symbol.
 
 1. Prepare "database" `dict.json` using file `dict.txt` with words list.
 
